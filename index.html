@@ -64,6 +64,8 @@
 
   .quote-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--slate);border-radius:10px;padding:13px 14px;margin-bottom:10px;cursor:pointer;position:relative;}
   .quote-card.status-pendente{border-left-color:var(--amber);}
+  .quote-card.status-aguardando_aprovacao{border-left-color:var(--amber);}
+  .quote-card.status-aguardando_pagamento{border-left-color:var(--copper);}
   .quote-card.status-aprovado{border-left-color:var(--green);}
   .quote-card.status-andamento{border-left-color:var(--blueprint);}
   .quote-card.status-concluido{border-left-color:var(--green);}
@@ -75,13 +77,13 @@
   .quote-card .row2{display:flex;justify-content:space-between;align-items:center;}
   .quote-card .valor{font-size:14px;font-weight:600;}
   .badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:500;}
-  .badge.status-pendente{background:#FBF0DA;color:#8A6314;}
+  .badge.status-pendente{background:#EDEBE6;color:#5B6470;}
+  .badge.status-aguardando_aprovacao{background:#FBF0DA;color:#8A6314;}
   .badge.status-aprovado{background:#E1F0E6;color:#2C6B45;}
   .badge.status-andamento{background:#DCE7F1;color:#264A6E;}
   .badge.status-concluido{background:#E1F0E6;color:#2C6B45;}
   .badge.status-cancelado{background:#F3E1DF;color:#8A362D;}
   .badge.status-aguardando_pagamento{background:#DCE7F1;color:#264A6E;}
-  .badge.status-garantia{background:#E1F0E6;color:#2C6B45;}
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--slate);}
   .empty-state p{font-size:13px;line-height:1.5;}
@@ -455,7 +457,7 @@
       <div class="home-hero">
         <p class="eyebrow">Fluxo de caixa</p>
         <h2 id="finTotal">R$ 0,00</h2>
-        <p>Soma de todos os orçamentos aprovados em diante (aprovado, em andamento, aguardando pagamento, concluído ou em garantia).</p>
+        <p>Soma de todos os orçamentos aprovados em diante (aprovado, em andamento, aguardando pagamento ou concluído).</p>
       </div>
       <p class="section-title">POR MÊS</p>
       <div id="finMeses"></div>
@@ -685,11 +687,6 @@
         <label class="label">E-mail do cliente</label>
         <input type="text" id="fClienteEmail" placeholder="email@exemplo.com">
       </div>
-      <div class="field-group">
-        <label class="label">E-mails adicionais (opcional)</label>
-        <input type="text" id="fEmailsExtra" placeholder="separados por vírgula">
-        <div class="hint">Além do e-mail do cliente, quem mais entra no campo "Para" quando você compartilha por e-mail?</div>
-      </div>
 
       <div id="blocoComercio">
         <hr class="section-divider">
@@ -829,7 +826,7 @@
     'plano-full': ['Plano Full', 'libere o VaptOrc sem limites'],
   };
   const tabScreens = ['home','orcamentos','clientes','relatorios'];
-  console.log('[VaptOrc] build 2026-09-19-01 (relatorios-dashboard-pdf)');
+  console.log('[VaptOrc] build 2026-09-19-02 (status-simplificados)');
   let history = ['login'];
   let modoAtual = 'comercio';
   let modeloContratoAtual = 'banco';
@@ -848,9 +845,12 @@
   let inatividadeTimer = null;
   const TEMPO_LIMITE_INATIVIDADE_MS = 60 * 60 * 1000; // 1 hora
   let docContexto = { modo: 'novo' };
-  const statusLabel = {pendente:'Pendente', aguardando_aprovacao:'Aguardando aprovação', aprovado:'Aprovado', andamento:'Em andamento', aguardando_pagamento:'Aguardando pagamento', concluido:'Concluído', garantia:'Garantia', cancelado:'Cancelado'};
-  const statusOrdem = ['pendente','aguardando_aprovacao','aprovado','andamento','aguardando_pagamento','concluido','garantia','cancelado'];
-  const statusConfirmados = ['aprovado','andamento','aguardando_pagamento','concluido','garantia'];
+  // 'pendente' é só o rascunho ainda não compartilhado: não é um status escolhível.
+  const statusLabel = {pendente:'Rascunho', aguardando_aprovacao:'Aguardando aprovação', aprovado:'Aprovado', andamento:'Em andamento', aguardando_pagamento:'Aguardando pagamento', concluido:'Concluído', cancelado:'Cancelado'};
+  const statusOrdem = ['aguardando_aprovacao','aprovado','andamento','aguardando_pagamento','concluido','cancelado'];
+  // Orçamento ainda não aprovado pelo cliente (pode ser editado)
+  const statusEditaveis = ['pendente','aguardando_aprovacao'];
+  const statusConfirmados = ['aprovado','andamento','aguardando_pagamento','concluido'];
   const tipoItemLabel = {servico:'Serviço', material:'Peça'};
   const svgIcon = (path, extra) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;">${extra||''}${path}</svg>`;
   const iconEditar = svgIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>');
@@ -1246,9 +1246,9 @@ async function concluirCadastroGoogle(){
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?empresa_id=eq.${empresaId}&select=status`, { headers: authHeaders() });
     if(!res.ok) return;
     const rows = await res.json();
-    const pendentes = rows.filter(r=>r.status==='pendente').length;
+    const pendentes = rows.filter(r=>r.status==='aguardando_aprovacao').length;
     const andamento = rows.filter(r=>r.status==='andamento').length;
-    document.getElementById('homeResumo').textContent = `${pendentes} orçamento(s) pendente(s) e ${andamento} em andamento.`;
+    document.getElementById('homeResumo').textContent = `${pendentes} orçamento(s) aguardando aprovação e ${andamento} em andamento.`;
   }
 
   // ===================== PLANO FULL =====================
@@ -1439,7 +1439,7 @@ async function concluirCadastroGoogle(){
 
   // ===================== ORÇAMENTOS (lista + detalhe) =====================
   function renderFilters(){
-    const chips = [['todos','Todos'],['pendente','Pendente'],['aprovado','Aprovado'],['andamento','Em andamento'],['concluido','Concluído']];
+    const chips = [['todos','Todos'],['aguardando_aprovacao','Aguardando aprovação'],['aprovado','Aprovado'],['andamento','Em andamento'],['aguardando_pagamento','Aguardando pagamento'],['concluido','Concluído'],['cancelado','Cancelado']];
     const el = document.getElementById('filterChips');
     el.innerHTML = chips.map((c,i)=>`<div class="chip ${i===0?'active':''}" onclick="filtrarLista('${c[0]}', this)">${c[1]}</div>`).join('');
   }
@@ -1449,7 +1449,7 @@ async function concluirCadastroGoogle(){
     const list = document.getElementById('quoteList');
     list.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
     try{
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?empresa_id=eq.${empresaId}&select=id,numero,status,categoria,valor_total,enviado_em,emails_extra,clientes(nome)&order=created_at.desc`, { headers: authHeaders() });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?empresa_id=eq.${empresaId}&select=id,numero,status,categoria,valor_total,enviado_em,clientes(nome)&order=created_at.desc`, { headers: authHeaders() });
       orcamentosCache = res.ok ? await res.json() : [];
     }catch(e){ orcamentosCache = []; }
     renderQuoteList('todos');
@@ -1475,15 +1475,12 @@ async function concluirCadastroGoogle(){
   function abrirDetalheOrcamento(id){
     const q = orcamentosCache.find(o=>o.id===id);
     if(!q) return;
-    const opcoes = statusOrdem.map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${statusLabel[s]}</option>`).join('');
+    const opcoesBase = statusOrdem.map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${statusLabel[s]}</option>`).join('');
+    // Rascunho (ainda não compartilhado) não está na lista de status: aparece só como valor atual
+    const opcoes = statusOrdem.includes(q.status) ? opcoesBase : `<option value="${q.status}" selected>${statusLabel[q.status]||q.status} (ainda não compartilhado)</option>` + opcoesBase;
     const envioHtml = `
         ${q.enviado_em ? `<div class="hint" style="margin-bottom:12px;">Último compartilhamento em ${new Date(q.enviado_em).toLocaleString('pt-BR')}.</div>` : ''}
-        <div class="field-group">
-          <label class="label">E-mails adicionais (opcional)</label>
-          <input type="text" id="detEmailsExtra" placeholder="separados por vírgula" value="${(q.emails_extra||'').replace(/"/g,'&quot;')}">
-          <div class="hint">Entram no campo "Para" quando você compartilha por e-mail.</div>
-        </div>
-        <button class="cta-full" style="margin-bottom:16px;" onclick="abrirCompartilharOrcamento('${id}', document.getElementById('detEmailsExtra').value.trim())">Compartilhar orçamento</button>
+        <button class="cta-full" style="margin-bottom:16px;" onclick="abrirCompartilharOrcamento('${id}')">Compartilhar orçamento</button>
       `;
     document.getElementById('detalheConteudo').innerHTML = `
       <div class="field-group">
@@ -1494,18 +1491,18 @@ async function concluirCadastroGoogle(){
         <div class="field-group"><label class="label">Número</label><input type="text" value="ORÇ-${String(q.numero).padStart(3,'0')}" disabled></div>
         <div class="field-group"><label class="label">Valor</label><input type="text" value="R$ ${Number(q.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2})}" disabled></div>
       </div>
-      ${envioHtml}
-      <div style="margin-bottom:16px;">
-        ${q.status==='pendente'
-          ? `<button class="btn-ghost" style="width:100%;" onclick="editarOrcamento('${id}')">${iconEditar} Ver e editar proposta</button>`
-          : `<button class="btn-ghost" style="width:100%;" onclick="visualizarOrcamento('${id}')">${iconOlho} Ver proposta</button>`}
-      </div>
       <div class="field-group">
         <label class="label">Status</label>
         <select id="detStatus">${opcoes}</select>
-        <div class="hint">Muda aqui quando o cliente aprova por fora, ou pra marcar como concluído/em andamento.</div>
+        <div class="hint">Muda aqui quando o cliente aprova por fora, ou pra acompanhar o andamento até a conclusão.</div>
       </div>
-      <button class="cta-full" onclick="salvarStatusOrcamento('${id}')">Salvar status</button>
+      <button class="cta-full" style="margin-bottom:16px;" onclick="salvarStatusOrcamento('${id}')">Salvar status</button>
+      ${envioHtml}
+      <div style="margin-bottom:16px;">
+        ${statusEditaveis.includes(q.status)
+          ? `<button class="btn-ghost" style="width:100%;" onclick="editarOrcamento('${id}')">${iconEditar} Ver e editar proposta</button>`
+          : `<button class="btn-ghost" style="width:100%;" onclick="visualizarOrcamento('${id}')">${iconOlho} Ver proposta</button>`}
+      </div>
       <button class="btn-danger" onclick="excluirOrcamento('${id}')">Excluir orçamento</button>
     `;
     showScreen('orcamento-detalhe');
@@ -1671,7 +1668,7 @@ async function concluirCadastroGoogle(){
   // ===================== RELATÓRIOS =====================
   let relPeriodo = '90';
   const relPeriodoLabel = {'30':'Últimos 30 dias','90':'Últimos 90 dias','365':'Últimos 12 meses','all':'Todo o período'};
-  const relCorStatus = {pendente:'var(--amber)', aguardando_aprovacao:'var(--amber)', aprovado:'var(--blue-status)', andamento:'var(--blueprint)', aguardando_pagamento:'var(--copper)', concluido:'var(--green)', garantia:'var(--green)', cancelado:'var(--red)'};
+  const relCorStatus = {pendente:'var(--amber)', aguardando_aprovacao:'var(--amber)', aprovado:'var(--blue-status)', andamento:'var(--blueprint)', aguardando_pagamento:'var(--copper)', concluido:'var(--green)', cancelado:'var(--red)'};
   const relBrl = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
   const relNum = v => Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1});
   const relEsc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1944,7 +1941,7 @@ async function concluirCadastroGoogle(){
     saldoBox.innerHTML = '<div class="hint">Carregando saldo...</div>';
     list.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
     try{
-      const resContrato = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?empresa_id=eq.${empresaId}&cliente_id=eq.${clienteId}&modelo_contrato=eq.banco_horas&status=in.(aprovado,andamento,aguardando_pagamento,concluido,garantia)&select=id,numero,carga_horaria_contratada&order=created_at.desc&limit=1`, { headers: authHeaders() });
+      const resContrato = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?empresa_id=eq.${empresaId}&cliente_id=eq.${clienteId}&modelo_contrato=eq.banco_horas&status=in.(aprovado,andamento,aguardando_pagamento,concluido)&select=id,numero,carga_horaria_contratada&order=created_at.desc&limit=1`, { headers: authHeaders() });
       const contratos = resContrato.ok ? await resContrato.json() : [];
       const contrato = contratos[0] || null;
 
@@ -2326,7 +2323,6 @@ async function concluirCadastroGoogle(){
     document.getElementById('fCliente').value = '';
     document.getElementById('fClienteTelefone').value = '';
     document.getElementById('fClienteEmail').value = '';
-    document.getElementById('fEmailsExtra').value = '';
     document.getElementById('fEscopo').value = '';
     ['fCargaHoraria','fValorHoraBanco','fValorPacote','fValorHoraCons','fHorasEstCons','fValorTotalAvulsa','fValorProjeto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fValidade').value = 15;
@@ -2414,7 +2410,7 @@ async function concluirCadastroGoogle(){
     document.getElementById('docActionsCreate2').style.display = modo==='novo' ? 'flex' : 'none';
     document.getElementById('docActionsView').style.display = modo==='view' ? 'flex' : 'none';
     document.getElementById('docActionsView2').style.display = modo==='view' ? 'flex' : 'none';
-    document.getElementById('docViewEditarBtn').style.display = (modo==='view' && statusAtual==='pendente') ? 'inline-block' : 'none';
+    document.getElementById('docViewEditarBtn').style.display = (modo==='view' && statusEditaveis.includes(statusAtual)) ? 'inline-block' : 'none';
   }
 
   function gerarDocumento(){
@@ -2423,7 +2419,6 @@ async function concluirCadastroGoogle(){
     if(!clienteTelefone){ alert('Telefone do cliente é obrigatório (agora é obrigatório no cadastro, e é pra ele que o orçamento é enviado).'); return; }
     const clienteDocumento = document.getElementById('fClienteDocumento').value.trim();
     const clienteEmail = document.getElementById('fClienteEmail').value.trim();
-    const emailsExtra = document.getElementById('fEmailsExtra').value.trim();
     const textoPadrao = document.getElementById('fTextoPadrao').value;
     const pagamento = document.getElementById('fPagamento').value;
     const obrigCliente = document.getElementById('fObrigCliente').value;
@@ -2464,7 +2459,7 @@ async function concluirCadastroGoogle(){
     }
 
     document.getElementById('docContent').innerHTML = construirDocumentoHTML(ctx);
-    window._pendingCliente = { nome: cliente, telefone: clienteTelefone, documento: clienteDocumento, email: clienteEmail, emailsExtra: emailsExtra };
+    window._pendingCliente = { nome: cliente, telefone: clienteTelefone, documento: clienteDocumento, email: clienteEmail };
     window._pendingPayload = payload;
     docContexto = { modo: 'novo' };
     mostrarAcoesDoc('novo');
@@ -2514,7 +2509,7 @@ async function concluirCadastroGoogle(){
       horasEstimadas: orc.horas_estimadas
     };
     document.getElementById('docContent').innerHTML = construirDocumentoHTML(ctx);
-    window._pendingCliente = { nome: cliente.nome, telefone: cliente.telefone, documento: cliente.documento, email: cliente.email, emailsExtra: orc.emails_extra };
+    window._pendingCliente = { nome: cliente.nome, telefone: cliente.telefone, documento: cliente.documento, email: cliente.email };
     window._orcamentoAtual = orc;
     docContexto = { modo: 'view', orcamentoId: id, status: orc.status };
     mostrarAcoesDoc('view', orc.status);
@@ -2550,7 +2545,6 @@ async function concluirCadastroGoogle(){
     document.getElementById('fCliente').value = cliente.nome || '';
     document.getElementById('fClienteTelefone').value = cliente.telefone || '';
     document.getElementById('fClienteEmail').value = cliente.email || '';
-    document.getElementById('fEmailsExtra').value = orc.emails_extra || '';
     document.getElementById('fTextoPadrao').value = orc.texto_abertura || '';
     document.getElementById('fPagamento').value = orc.condicoes_pagamento || '';
     document.getElementById('fObrigCliente').value = orc.obrigacoes_cliente || '';
@@ -2654,11 +2648,11 @@ async function concluirCadastroGoogle(){
   }
   document.addEventListener('keydown', e => { if(e.key === 'Escape') fecharCompartilhar(); });
 
-  async function abrirCompartilharOrcamento(id, emailsExtraParam){
+  async function abrirCompartilharOrcamento(id){
     if(!id){ alert('Abra o orçamento antes de compartilhar.'); return; }
     shareAbrir('Compartilhar orçamento', 'Carregando...');
     try{
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?id=eq.${id}&empresa_id=eq.${empresaId}&select=id,numero,valor_total,link_publico_token,emails_extra,clientes(nome,telefone,email)`, { headers: authHeaders() });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?id=eq.${id}&empresa_id=eq.${empresaId}&select=id,numero,valor_total,link_publico_token,clientes(nome,telefone,email)`, { headers: authHeaders() });
       const rows = res.ok ? await res.json() : [];
       const orc = rows[0];
       if(!orc) throw new Error('não encontrado');
@@ -2666,12 +2660,10 @@ async function concluirCadastroGoogle(){
       const link = `https://vaptorc.github.io/vaptorc-cliente/?t=${orc.link_publico_token}`;
       const numeroFmt = String(orc.numero || '').padStart(3, '0');
       const valor = Number(orc.valor_total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2});
-      const extra = (emailsExtraParam !== undefined && emailsExtraParam !== null) ? emailsExtraParam : (orc.emails_extra || '');
       shareCtx = {
         tipo: 'orcamento', orcId: orc.id, link,
         telefone: shareTelefone(cli.telefone),
-        emails: shareListaEmails(cli.email, extra),
-        emailsExtraTexto: String(extra || ''),
+        emails: shareListaEmails(cli.email),
         assunto: `Orçamento nº ${numeroFmt} - ${company.nome || ''}`
       };
       document.getElementById('sharePreview').value = `Olá, ${cli.nome || ''}! Segue o orçamento nº ${numeroFmt}, no valor de R$ ${valor}.\n\nVeja os detalhes e responda pelo link:\n${link}`;
@@ -2695,7 +2687,6 @@ async function concluirCadastroGoogle(){
       tipo: 'saldo', link: '',
       telefone: shareTelefone(cliente.telefone),
       emails: shareListaEmails(cliente.email),
-      emailsExtraTexto: '',
       assunto: `Banco de horas - ${company.nome || ''} (ORÇ-${numeroFmt})`
     };
     shareAbrir('Compartilhar saldo do banco de horas', shareDestino(shareCtx));
@@ -2715,7 +2706,7 @@ async function concluirCadastroGoogle(){
     if(!c || c.tipo !== 'orcamento') return;
     fetch(`${SUPABASE_URL}/rest/v1/rpc/registrar_compartilhamento`, {
       method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ p_orcamento_id: c.orcId, p_canal: canal, p_emails_extra: c.emailsExtraTexto })
+      body: JSON.stringify({ p_orcamento_id: c.orcId, p_canal: canal })
     }).then(() => { try{ carregarOrcamentos(); }catch(e){} }).catch(() => {});
   }
 
@@ -2787,7 +2778,6 @@ async function concluirCadastroGoogle(){
       } else {
         const clienteId = await encontrarOuCriarCliente(window._pendingCliente.nome, window._pendingCliente.telefone, window._pendingCliente.documento, window._pendingCliente.email);
         const payload = Object.assign({ empresa_id: empresaId, cliente_id: clienteId }, window._pendingPayload);
-        if(window._pendingCliente.emailsExtra) payload.emails_extra = window._pendingCliente.emailsExtra;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos`, {
           method:'POST', headers: authHeaders({'Prefer':'return=representation'}), body: JSON.stringify(payload)
         });
@@ -2804,7 +2794,7 @@ async function concluirCadastroGoogle(){
       btn.disabled = false; btn.textContent = textoOriginal;
       showScreen('orcamentos');
       if(enviarAgora){
-        abrirCompartilharOrcamento(orcamentoId, window._pendingCliente ? window._pendingCliente.emailsExtra : null);
+        abrirCompartilharOrcamento(orcamentoId);
       } else {
         alert(estaEditando ? 'Alterações salvas.' : 'Orçamento salvo como rascunho. Quando quiser, abre ele na lista e manda enviar.');
       }
