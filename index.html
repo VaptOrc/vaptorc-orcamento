@@ -235,6 +235,17 @@
   .share-opt .sub{display:block;font-weight:400;font-size:11.5px;color:var(--slate);margin-top:1px;}
   .share-msg{font-size:12px;color:var(--green);min-height:16px;margin-top:10px;}
   .share-msg.erro{color:var(--red);}
+
+  /* ---- Assinatura: banner e formas de pagamento ---- */
+  .banner-assinatura{display:none;padding:12px 18px;font-size:13px;line-height:1.4;align-items:center;gap:12px;flex-wrap:wrap;}
+  .banner-assinatura.on{display:flex;}
+  .banner-assinatura.aviso{background:#FFF4DC;color:#6B4A0B;border-bottom:1px solid #EBD9A8;}
+  .banner-assinatura.vencida{background:#FBE9E7;color:#7A2A22;border-bottom:1px solid #EFC6C0;}
+  .banner-assinatura button{margin-left:auto;background:var(--copper);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:600;font-size:12.5px;font-family:'Inter',sans-serif;cursor:pointer;}
+  body.tela-login .banner-assinatura{display:none !important;}
+  .pay-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:var(--white);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:9px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink);}
+  .pay-opt span{font-size:12px;color:var(--slate);font-weight:400;}
+  .pay-opt.sel{border-color:var(--copper);background:#FFF8F1;}
 </style>
 </head>
 <body class="tela-login">
@@ -303,6 +314,7 @@
       </button>
     </div>
   </header>
+  <div id="bannerAssinatura" class="banner-assinatura"></div>
 
   <main>
 
@@ -530,9 +542,9 @@
 
     <!-- PLANO FULL -->
     <section class="screen" id="screen-plano-full">
-      <div class="doc-block" style="background:#fff8ec;border-radius:12px;padding:18px;margin-bottom:16px;">
-        <p style="font-weight:700;margin:0 0 6px;">Você está no plano Free</p>
-        <p class="sub" style="margin:0;">1 cliente, 1 orçamento e 1 item de catálogo cadastrados por vez, sem sua assinatura no documento e com marca d'água no orçamento.</p>
+      <div class="doc-block" id="planoStatusBox" style="background:#fff8ec;border-radius:12px;padding:18px;margin-bottom:16px;">
+        <p id="planoStatusTitulo" style="font-weight:700;margin:0 0 6px;">Você está no plano Free</p>
+        <p id="planoStatusTexto" class="sub" style="margin:0;">1 cliente, 1 orçamento e 1 item de catálogo cadastrados por vez, sem sua assinatura no documento e com marca d'água no orçamento.</p>
       </div>
       <p class="section-title">O QUE O PLANO FULL LIBERA</p>
       <ul style="padding-left:20px;line-height:1.8;">
@@ -541,7 +553,16 @@
         <li>Ordens de Serviço e controle de banco de horas</li>
         <li>Integração com a Agenda do Google</li>
       </ul>
-      <button class="cta-full" onclick="assinarPlanoFull()" id="assinarPlanoFullBtn">Assinar Plano Full</button>
+      <div id="payArea">
+        <p class="section-title" style="margin-top:22px;">COMO VOCÊ QUER PAGAR</p>
+        <button type="button" class="pay-opt" data-forma="recorrente" onclick="selecionarForma('recorrente')">Cartão de crédito recorrente<span>Renova sozinho a cada 30 dias</span></button>
+        <button type="button" class="pay-opt" data-forma="credito" onclick="selecionarForma('credito')">Cartão de crédito<span>Você paga 30 dias por vez, sem renovação automática</span></button>
+        <button type="button" class="pay-opt" data-forma="debito" onclick="selecionarForma('debito')">Cartão de débito<span>Você paga 30 dias por vez</span></button>
+        <button type="button" class="pay-opt" data-forma="pix" onclick="selecionarForma('pix')">Pix<span>Você paga 30 dias por vez, com QR Code ou copia e cola</span></button>
+        <button class="cta-full" onclick="pagarPlanoFull()" id="assinarPlanoFullBtn">Pagar</button>
+        <div class="hint" id="payMsg" style="text-align:center;margin-top:10px;"></div>
+        <div class="hint" style="text-align:center;margin-top:6px;">Cada pagamento libera 30 dias. Os dados do cartão ficam com o Mercado Pago.</div>
+      </div>
       <div class="hint" style="text-align:center;margin-top:10px;">Dúvidas? Fale com a gente: <a href="mailto:comercial@rikasolucoes.com.br">comercial@rikasolucoes.com.br</a></div>
     </section>
 
@@ -623,6 +644,14 @@
         <div class="field-group"><label class="label">Telefone</label><input type="text" id="cTelefone"></div>
       </div>
       <div class="field-group"><label class="label">E-mail</label><input type="text" id="cEmail"></div>
+      <div class="field-group">
+        <label class="label">Cor da sua marca</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="color" id="cCor" value="#2F5D8A" oninput="previewCor(this.value)" style="width:52px;height:40px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;">
+          <button type="button" class="btn-ghost" style="padding:9px 12px;font-size:12px;" onclick="restaurarCorPadrao()">Voltar à cor padrão</button>
+        </div>
+        <div class="hint">Muda a cor do app e do orçamento que o seu cliente vê. O tom é ajustado automaticamente para o texto continuar legível.</div>
+      </div>
       <hr class="section-divider">
       <p class="section-title">TEXTO PADRÃO DA EMPRESA</p>
       <div class="field-group">
@@ -826,7 +855,8 @@
     'plano-full': ['Plano Full', 'libere o VaptOrc sem limites'],
   };
   const tabScreens = ['home','orcamentos','clientes','relatorios'];
-  console.log('[VaptOrc] build 2026-09-19-02 (status-simplificados)');
+  console.log('[VaptOrc] build 2026-09-19-03 (cobranca-30d, bloqueio-parcial, cor-da-marca, formas-de-pagamento)');
+  let corPendente; // undefined = sem mudança | null = voltar ao padrão | '#RRGGBB'
   let history = ['login'];
   let modoAtual = 'comercio';
   let modeloContratoAtual = 'banco';
@@ -883,6 +913,7 @@
     }catch(e){ return 0; }
   }
   async function bloqueadoPorLimiteFree(tabela, singular){
+    if(exigeAssinatura()) return true;
     if(!company || company.plano !== 'free') return false;
     const total = await contarRegistros(tabela);
     if(total >= 1){
@@ -898,7 +929,12 @@
     if(confirm('Sair da conta?')) logout();
   }
 
+  const telasSuspensas = ['novo','financeiro','relatorios','relatorio-status','relatorio-categoria','relatorio-banco-horas','agenda'];
   function showScreen(name, push=true){
+    if(assinaturaVencida() && telasSuspensas.includes(name)) name = 'plano-full';
+    if(name !== 'empresa' && typeof corPendente !== 'undefined' && corPendente !== undefined){
+      corPendente = undefined; aplicarTema(company && company.cor_primaria);
+    }
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('screen-'+name).classList.add('active');
     document.body.classList.toggle('tela-login', name==='login');
@@ -925,6 +961,7 @@
     if(name==='novo'){ popularCatalogoSelect(); popularClienteSelect(); }
     if(name==='admin') carregarAdmin();
     if(name==='relatorios') carregarDashboard();
+    if(name==='plano-full') renderPlanoFull();
   }
   function voltarInterno(){
     if(history.length > 1){
@@ -1120,6 +1157,7 @@ async function concluirCadastroGoogle(){
   function logout(){
     localStorage.removeItem('vaptorc_session');
     session = null; empresaId = null; company = {};
+    aplicarTema(null);
     history = ['login'];
     try{ window.history.replaceState({vaptorcNav:true}, '', location.pathname); }catch(e){}
     pararTimerInatividade();
@@ -1164,21 +1202,20 @@ async function concluirCadastroGoogle(){
     const empresas = await res2.json();
     if(!empresas.length) return false;
     company = empresas[0];
-    document.getElementById('navPlanoFullBtn').style.display = company.plano === 'free' ? 'flex' : 'none';
-    document.getElementById('tilePlanoFull').style.display = company.plano === 'free' ? 'block' : 'none';
+    const mostrarPlano = company.plano === 'free' || (company.plano === 'full' && !company.isento_cobranca);
+    document.getElementById('navPlanoFullBtn').style.display = mostrarPlano ? 'flex' : 'none';
+    document.getElementById('tilePlanoFull').style.display = mostrarPlano ? 'block' : 'none';
+    aplicarTema(company.cor_primaria);
+    atualizarBanner();
     return true;
   }
 
   async function irParaHomeOuBloqueio(){
     iniciarTimerInatividade();
     try{ window.history.replaceState({vaptorcNav:true}, '', location.pathname); }catch(e){}
-    if(company.status_assinatura === 'bloqueada' && !souSuperAdmin){
-      history = ['bloqueado'];
-      showScreen('bloqueado', false);
-    } else {
-      history = ['home'];
-      showScreen('home', false);
-    }
+    history = ['home'];
+    showScreen('home', false);
+    atualizarBanner();
   }
 
   async function initSession(){
@@ -1255,8 +1292,140 @@ async function concluirCadastroGoogle(){
   function abrirPlanoFull(){
     showScreen('plano-full');
   }
-  function assinarPlanoFull(){
-    window.location.href = 'mailto:comercial@rikasolucoes.com.br?subject=' + encodeURIComponent('Quero assinar o Plano Full — ' + (company.nome||'')) + '&body=' + encodeURIComponent('Oi! Quero assinar o Plano Full do VaptOrc pra minha empresa ' + (company.nome||'') + '.');
+
+  // ---- estado da assinatura ----
+  let formaPagamentoSel = 'pix';
+  function fmtBRL(v){ return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+  function fmtData(iso){ if(!iso) return ''; const p = String(iso).split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+  function precoPlanoFull(){ return Number(company && company.valor_mensalidade) || 18.99; }
+  function assinaturaVencida(){
+    return !!(company && company.status_assinatura === 'bloqueada' && !souSuperAdmin);
+  }
+  function diasParaVencer(){
+    if(!company || !company.assinatura_vence_em) return null;
+    const p = company.assinatura_vence_em.split('-').map(Number);
+    const venc = new Date(p[0], p[1]-1, p[2]);
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    return Math.round((venc - hoje) / 86400000);
+  }
+  function exigeAssinatura(){
+    if(!assinaturaVencida()) return false;
+    alert('Sua assinatura venceu, então este recurso está suspenso. Renove o plano para liberar de novo. Seus dados continuam salvos.');
+    abrirPlanoFull();
+    return true;
+  }
+  function atualizarBanner(){
+    const b = document.getElementById('bannerAssinatura');
+    if(!b) return;
+    b.className = 'banner-assinatura'; b.innerHTML = '';
+    if(!company || company.plano !== 'full' || company.isento_cobranca) return;
+    const dias = diasParaVencer();
+    if(assinaturaVencida()){
+      b.className = 'banner-assinatura vencida on';
+      b.innerHTML = `<span><strong>Assinatura vencida${company.assinatura_vence_em ? ' em ' + fmtData(company.assinatura_vence_em) : ''}.</strong> Novos orçamentos, ordens de serviço, relatórios, financeiro, agenda e PDF estão suspensos. Seus dados continuam salvos.</span><button onclick="abrirPlanoFull()">Renovar agora</button>`;
+    } else if(dias !== null && dias >= 0 && dias <= 5){
+      b.className = 'banner-assinatura aviso on';
+      const quando = dias === 0 ? 'vence hoje' : (dias === 1 ? 'vence amanhã' : `vence em ${dias} dias`);
+      b.innerHTML = `<span>Sua assinatura ${quando} (${fmtData(company.assinatura_vence_em)}).</span><button onclick="abrirPlanoFull()">Renovar</button>`;
+    }
+  }
+
+  // ---- tela Plano Full ----
+  function selecionarForma(f){
+    formaPagamentoSel = f;
+    document.querySelectorAll('#payOpcoes .pay-opt, #payArea .pay-opt').forEach(b => b.classList.toggle('sel', b.dataset.forma === f));
+  }
+  function renderPlanoFull(){
+    const box = document.getElementById('planoStatusBox');
+    const tit = document.getElementById('planoStatusTitulo');
+    const txt = document.getElementById('planoStatusTexto');
+    const area = document.getElementById('payArea');
+    const btn = document.getElementById('assinarPlanoFullBtn');
+    document.getElementById('payMsg').textContent = '';
+    box.style.background = '#fff8ec';
+    area.style.display = 'block';
+    const preco = fmtBRL(precoPlanoFull());
+    if(company.plano === 'free'){
+      tit.textContent = 'Você está no plano Free';
+      txt.textContent = "1 cliente, 1 orçamento e 1 item de catálogo cadastrados por vez, sem sua assinatura no documento e com marca d'água no orçamento.";
+      btn.textContent = `Assinar por ${preco} a cada 30 dias`;
+    } else if(company.isento_cobranca){
+      tit.textContent = 'Plano Full ativo';
+      txt.textContent = 'Sua conta está com cobrança isenta.';
+      area.style.display = 'none';
+    } else if(assinaturaVencida()){
+      box.style.background = '#FBE9E7';
+      tit.textContent = `Assinatura vencida${company.assinatura_vence_em ? ' em ' + fmtData(company.assinatura_vence_em) : ''}`;
+      txt.textContent = 'Novos orçamentos, ordens de serviço, relatórios, financeiro, agenda e PDF estão suspensos. Seus dados continuam salvos. Ao pagar, tudo volta na hora.';
+      btn.textContent = `Renovar por ${preco}`;
+    } else {
+      const dias = diasParaVencer();
+      tit.textContent = company.assinatura_vence_em ? `Plano Full ativo até ${fmtData(company.assinatura_vence_em)}` : 'Plano Full ativo';
+      txt.textContent = (dias !== null && dias >= 0) ? (dias === 0 ? 'Vence hoje.' : `Faltam ${dias} dia(s) para o vencimento.`) + ' Renovar agora soma 30 dias ao seu vencimento, sem perder nenhum.' : '';
+      btn.textContent = `Renovar por ${preco}`;
+    }
+    document.getElementById('screenSubtitle').textContent = company.plano === 'free' ? 'libere o VaptOrc sem limites' : 'situação e renovação';
+    selecionarForma(company.forma_pagamento_preferida || formaPagamentoSel || 'pix');
+  }
+  async function pagarPlanoFull(){
+    const btn = document.getElementById('assinarPlanoFullBtn');
+    const msg = document.getElementById('payMsg');
+    btn.disabled = true;
+    msg.textContent = 'Gerando o seu link de pagamento...';
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/solicitar_pagamento`, {
+        method:'POST', headers: authHeaders(), body: JSON.stringify({ p_forma: formaPagamentoSel })
+      });
+      if(!res.ok) throw new Error('rpc');
+      const faturaId = await res.json();
+      for(let i = 0; i < 30; i++){
+        const r2 = await fetch(`${SUPABASE_URL}/rest/v1/faturas_vaptorc?id=eq.${faturaId}&select=mp_link`, { headers: authHeaders() });
+        if(r2.ok){
+          const rows = await r2.json();
+          if(rows[0] && rows[0].mp_link){ msg.textContent = 'Abrindo o pagamento...'; window.location.href = rows[0].mp_link; return; }
+        }
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      throw new Error('timeout');
+    }catch(e){
+      msg.innerHTML = 'Não deu pra gerar o link agora. Tente de novo em instantes ou escreva para <a href="mailto:comercial@rikasolucoes.com.br">comercial@rikasolucoes.com.br</a>.';
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  // ---- cor da marca ----
+  function hexParaHsl(hex){
+    const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h = 0, s = 0; const l = (max+min)/2;
+    if(max !== min){
+      const d = max - min;
+      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+      if(max === r) h = (g-b)/d + (g < b ? 6 : 0);
+      else if(max === g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h *= 60;
+    }
+    return [h, s*100, l*100];
+  }
+  function aplicarTema(hex){
+    const root = document.documentElement.style;
+    if(!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)){
+      ['--ink','--ink-soft','--blueprint'].forEach(v => root.removeProperty(v));
+      return;
+    }
+    const [h, s, l] = hexParaHsl(hex);
+    // Tons escuros fixos garantem contraste do texto branco, seja qual for a cor escolhida
+    root.setProperty('--ink', `hsl(${h.toFixed(0)} ${Math.min(s,55).toFixed(0)}% 16%)`);
+    root.setProperty('--ink-soft', `hsl(${h.toFixed(0)} ${Math.min(s,50).toFixed(0)}% 24%)`);
+    root.setProperty('--blueprint', `hsl(${h.toFixed(0)} ${Math.min(s,75).toFixed(0)}% ${Math.min(Math.max(l,30),44).toFixed(0)}%)`);
+  }
+  function previewCor(hex){ corPendente = hex; aplicarTema(hex); }
+  function restaurarCorPadrao(){
+    corPendente = null;
+    document.getElementById('cCor').value = '#2F5D8A';
+    aplicarTema(null);
   }
 
   async function abrirAgenda(){
@@ -1375,6 +1544,8 @@ async function concluirCadastroGoogle(){
     document.getElementById('cCnpj').value = company.cnpj || '';
     document.getElementById('cTelefone').value = company.telefone || '';
     document.getElementById('cEmail').value = company.email || '';
+    document.getElementById('cCor').value = company.cor_primaria || '#2F5D8A';
+    corPendente = undefined;
     document.getElementById('cTexto').value = company.texto_padrao || '';
     document.getElementById('cChavePix').value = company.chave_pix || '';
     document.getElementById('cDadosBancarios').value = company.dados_bancarios || '';
@@ -1425,6 +1596,7 @@ async function concluirCadastroGoogle(){
       logo_url: company.logo_url || null,
       assinatura_url: company.assinatura_url || null
     };
+    if(corPendente !== undefined) payload.cor_primaria = corPendente;
     try{
       const res = await fetch(`${SUPABASE_URL}/rest/v1/empresas?id=eq.${empresaId}`, {
         method:'PATCH', headers: authHeaders({'Prefer':'return=representation'}), body: JSON.stringify(payload)
@@ -1432,6 +1604,8 @@ async function concluirCadastroGoogle(){
       if(!res.ok) throw new Error('falhou');
       const rows = await res.json();
       company = rows[0];
+      corPendente = undefined;
+      aplicarTema(company.cor_primaria);
       showScreen('home');
       await atualizarResumoHome();
     }catch(e){ alert('Não deu pra salvar agora. Tenta de novo.'); }
@@ -1982,6 +2156,7 @@ async function concluirCadastroGoogle(){
   }
 
   async function salvarOS(){
+    if(exigeAssinatura()) return;
     const clienteId = document.getElementById('osClienteSelect').value;
     if(!clienteId){ alert('Selecione o cliente.'); return; }
     const data = document.getElementById('osData').value;
@@ -2573,6 +2748,7 @@ async function concluirCadastroGoogle(){
   }
 
   function baixarPdf(){
+    if(exigeAssinatura()) return;
     const nomeCliente = (window._pendingCliente && window._pendingCliente.nome) ? window._pendingCliente.nome : 'cliente';
     const nomeArquivo = `orcamento-${nomeCliente.replace(/[^a-zA-Z0-9]+/g,'-').toLowerCase()}.pdf`;
     html2pdf().from(document.getElementById('docContent')).set({
@@ -2649,6 +2825,7 @@ async function concluirCadastroGoogle(){
   document.addEventListener('keydown', e => { if(e.key === 'Escape') fecharCompartilhar(); });
 
   async function abrirCompartilharOrcamento(id){
+    if(exigeAssinatura()) return;
     if(!id){ alert('Abra o orçamento antes de compartilhar.'); return; }
     shareAbrir('Compartilhar orçamento', 'Carregando...');
     try{
