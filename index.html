@@ -214,6 +214,25 @@
   .rel-row-top .sub{color:var(--slate);font-size:12px;}
   .rel-track{height:8px;background:var(--paper-dim);border-radius:6px;overflow:hidden;}
   .rel-fill{height:100%;border-radius:6px;}
+
+  /* ===== Compartilhar (popup) ===== */
+  .share-overlay{position:fixed;inset:0;background:rgba(22,35,61,.55);display:none;align-items:flex-end;justify-content:center;z-index:1000;}
+  .share-overlay.open{display:flex;}
+  .share-sheet{background:var(--card);width:100%;max-width:440px;border-radius:16px 16px 0 0;padding:18px 18px 22px;max-height:92vh;overflow:auto;}
+  @media(min-width:600px){.share-overlay{align-items:center;padding:16px;}.share-sheet{border-radius:16px;}}
+  .share-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .share-head h3{font-size:16px;color:var(--ink);}
+  .share-x{background:none;border:none;font-size:26px;line-height:1;color:var(--slate);cursor:pointer;padding:0 4px;}
+  .share-dest{font-size:11.5px;color:var(--slate);line-height:1.5;white-space:pre-line;margin-bottom:10px;overflow-wrap:anywhere;}
+  .share-preview{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.45;color:var(--ink);background:var(--paper);}
+  .share-opt{display:flex;align-items:center;gap:12px;width:100%;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:9px;font-family:'Inter',sans-serif;font-weight:600;font-size:14px;color:var(--ink);cursor:pointer;text-align:left;}
+  .share-opt:hover:not(:disabled){border-color:var(--copper);}
+  .share-opt:focus-visible,.share-x:focus-visible{outline:2px solid var(--blueprint);outline-offset:2px;}
+  .share-opt:disabled{opacity:.5;cursor:default;}
+  .share-opt svg{flex-shrink:0;}
+  .share-opt .sub{display:block;font-weight:400;font-size:11.5px;color:var(--slate);margin-top:1px;}
+  .share-msg{font-size:12px;color:var(--green);min-height:16px;margin-top:10px;}
+  .share-msg.erro{color:var(--red);}
 </style>
 </head>
 <body class="tela-login">
@@ -660,7 +679,7 @@
       <div class="field-group">
         <label class="label">Telefone do cliente (WhatsApp) — obrigatório</label>
         <input type="text" id="fClienteTelefone" placeholder="Ex.: 85999998888">
-        <div class="hint">É pra esse número que o orçamento é enviado automaticamente.</div>
+        <div class="hint">É nesse número que o WhatsApp abre quando você compartilha o orçamento.</div>
       </div>
       <div class="field-group">
         <label class="label">E-mail do cliente</label>
@@ -669,7 +688,7 @@
       <div class="field-group">
         <label class="label">E-mails adicionais (opcional)</label>
         <input type="text" id="fEmailsExtra" placeholder="separados por vírgula">
-        <div class="hint">Além do e-mail do cliente, quem mais deve receber esse orçamento por e-mail?</div>
+        <div class="hint">Além do e-mail do cliente, quem mais entra no campo "Para" quando você compartilha por e-mail?</div>
       </div>
 
       <div id="blocoComercio">
@@ -747,11 +766,11 @@
       </div>
       <div class="doc-actions" id="docActionsCreate2">
         <button class="btn-ghost" id="salvarRascunhoBtn" onclick="salvarOrcamento(false)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Salvar</button>
-        <button class="cta-full" id="enviarOrcBtn" onclick="salvarOrcamento(true)" style="margin-top:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg> Enviar</button>
+        <button class="cta-full" id="enviarOrcBtn" onclick="salvarOrcamento(true)" style="margin-top:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg> Compartilhar</button>
       </div>
       <div class="doc-actions" id="docActionsView" style="display:none;">
         <button class="btn-ghost" onclick="baixarPdf()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Baixar PDF</button>
-        <button class="btn-ghost" onclick="compartilharWhatsApp()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M3 21l1.65-4.95A9 9 0 1 1 8.95 19L3 21z"/></svg> Compartilhar no WhatsApp</button>
+        <button class="btn-ghost" onclick="abrirCompartilharOrcamento(window._orcamentoAtual && window._orcamentoAtual.id)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M3 21l1.65-4.95A9 9 0 1 1 8.95 19L3 21z"/></svg> Compartilhar</button>
         <button class="btn-ghost" id="docViewEditarBtn" onclick="editarOrcamentoAtual()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Editar</button>
       </div>
       <div class="doc-actions" id="docActionsView2" style="display:none;">
@@ -760,6 +779,25 @@
     </section>
 
   </main>
+
+  <div id="shareOverlay" class="share-overlay" onclick="if(event.target===this)fecharCompartilhar()">
+    <div class="share-sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <div class="share-head">
+        <h3 id="shareTitle">Compartilhar</h3>
+        <button class="share-x" onclick="fecharCompartilhar()" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="share-dest" id="shareDest"></div>
+      <textarea id="sharePreview" class="share-preview" aria-label="Mensagem" disabled></textarea>
+      <button class="share-opt" disabled onclick="compartilharVia('whatsapp')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65-4.95A9 9 0 1 1 8.95 19L3 21z"/></svg><span>WhatsApp<span class="sub">Abre o WhatsApp com a mensagem pronta</span></span></button>
+      <button class="share-opt" disabled onclick="compartilharVia('telegram')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span>Telegram<span class="sub">Você escolhe o contato dentro do Telegram</span></span></button>
+      <button class="share-opt" disabled onclick="compartilharVia('email')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>E-mail<span class="sub">Abre o app de e-mail do seu aparelho</span></span></button>
+      <button class="share-opt" disabled onclick="compartilharVia('gmail')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Gmail no navegador<span class="sub">Se você não usa app de e-mail no computador</span></span></button>
+      <button class="share-opt" disabled onclick="compartilharVia('copiar')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copiar mensagem</span></button>
+      <button class="share-opt" id="shareNativo" style="display:none;" disabled onclick="compartilharVia('nativo')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><span>Outros apps<span class="sub">Menu de compartilhamento do celular</span></span></button>
+      <div class="share-msg" id="shareMsg" role="status"></div>
+    </div>
+  </div>
+
 
   </div>
 </div>
@@ -1285,27 +1323,6 @@ async function concluirCadastroGoogle(){
     }catch(e){ /* falha ao criar evento não deve travar o salvamento da OS */ }
   }
 
-  async function notificarSaldoBancoHoras({cliente, contrato, consumido, horasHoje, data, hora, descricao}){
-    if(!cliente || !cliente.email || !contrato) return;
-    try{
-      await fetch('https://n8n.rikasolucoes.com.br/webhook/vaptorc-notificar-saldo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cliente_nome: cliente.nome,
-          cliente_email: cliente.email,
-          empresa_nome: company.nome || '',
-          numero: contrato.numero,
-          data, hora, descricao,
-          horas_gastas_hoje: horasHoje,
-          contratadas: parseFloat(contrato.carga_horaria_contratada||0),
-          consumido,
-          saldo: parseFloat(contrato.carga_horaria_contratada||0) - consumido
-        })
-      });
-    }catch(e){ /* aviso por e-mail é best-effort, não deve travar a OS */ }
-  }
-
   // ===================== BUSCA CNPJ/CPF (Receita, via BrasilAPI) =====================
   async function buscarDocumento(doc){
     const digits = doc.replace(/\D/g,'');
@@ -1459,14 +1476,14 @@ async function concluirCadastroGoogle(){
     const q = orcamentosCache.find(o=>o.id===id);
     if(!q) return;
     const opcoes = statusOrdem.map(s=>`<option value="${s}" ${s===q.status?'selected':''}>${statusLabel[s]}</option>`).join('');
-    const envioHtml = q.enviado_em
-      ? `<div class="hint" style="margin-bottom:16px;">Enviado em ${new Date(q.enviado_em).toLocaleString('pt-BR')}.</div>`
-      : `
+    const envioHtml = `
+        ${q.enviado_em ? `<div class="hint" style="margin-bottom:12px;">Último compartilhamento em ${new Date(q.enviado_em).toLocaleString('pt-BR')}.</div>` : ''}
         <div class="field-group">
           <label class="label">E-mails adicionais (opcional)</label>
-          <input type="text" id="detEmailsExtra" placeholder="separados por vírgula" value="${q.emails_extra||''}">
+          <input type="text" id="detEmailsExtra" placeholder="separados por vírgula" value="${(q.emails_extra||'').replace(/"/g,'&quot;')}">
+          <div class="hint">Entram no campo "Para" quando você compartilha por e-mail.</div>
         </div>
-        <button class="cta-full" style="margin-bottom:16px;" onclick="enviarAgoraDetalhe('${id}')">Enviar orçamento agora</button>
+        <button class="cta-full" style="margin-bottom:16px;" onclick="abrirCompartilharOrcamento('${id}', document.getElementById('detEmailsExtra').value.trim())">Compartilhar orçamento</button>
       `;
     document.getElementById('detalheConteudo').innerHTML = `
       <div class="field-group">
@@ -1492,14 +1509,6 @@ async function concluirCadastroGoogle(){
       <button class="btn-danger" onclick="excluirOrcamento('${id}')">Excluir orçamento</button>
     `;
     showScreen('orcamento-detalhe');
-  }
-
-  async function enviarAgoraDetalhe(id){
-    const emailsExtra = document.getElementById('detEmailsExtra').value.trim();
-    const ok = await chamarEnviarOrcamento(id, emailsExtra);
-    alert(ok ? 'Orçamento enviado!' : 'Não deu pra enviar agora. Tenta de novo.');
-    carregarOrcamentos();
-    showScreen('orcamentos');
   }
 
   async function salvarStatusOrcamento(id){
@@ -1966,7 +1975,7 @@ async function concluirCadastroGoogle(){
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
             <span class="mono">${o.horas_gastas}h</span>
             <div style="display:flex;gap:6px;">
-              ${o.orcamento_id ? `<button class="btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();reenviarOS('${o.id}')">${iconEnviar} Reenviar</button>` : ''}
+              ${o.orcamento_id ? `<button class="btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();compartilharOS('${o.id}')">${iconEnviar} Compartilhar</button>` : ''}
               <button class="del-btn" onclick="event.stopPropagation();excluirOS('${o.id}')">×</button>
             </div>
           </div>
@@ -2005,13 +2014,14 @@ async function concluirCadastroGoogle(){
 
       const cliente = clientesCache.find(c=>c.id===clienteId);
       criarEventoAgenda({ titulo: `OS — ${cliente ? cliente.nome : 'Cliente'}`, descricao, data, hora, horas });
-      if(osContratoObj){
-        notificarSaldoBancoHoras({ cliente, contrato: osContratoObj, consumido: osConsumidoAtual + horas, horasHoje: horas, data, hora, descricao });
-      }
+      const saldoParaCompartilhar = osContratoObj
+        ? { cliente, contrato: osContratoObj, consumido: osConsumidoAtual + horas, horasHoje: horas, data, hora, descricao, anexos: anexosNovos }
+        : null;
 
       document.getElementById('osDescricao').value=''; document.getElementById('osHoras').value=''; document.getElementById('osHora').value='';
       document.getElementById('osAnexosInput').value=''; osAnexosSelecionados=[]; renderOsAnexosSelecionados();
       await carregarOS();
+      if(saldoParaCompartilhar) abrirCompartilharSaldo(saldoParaCompartilhar);
     }catch(e){ alert('Não deu pra salvar a OS agora.'); }
   }
 
@@ -2064,17 +2074,13 @@ async function concluirCadastroGoogle(){
     }catch(e){ alert('Não deu pra excluir agora.'); }
   }
 
-  async function reenviarOS(id){
+  function compartilharOS(id){
     const o = osListCache.find(x=>x.id===id);
     const clienteId = document.getElementById('osClienteSelect').value;
     const cliente = clientesCache.find(c=>c.id===clienteId);
-    if(!o || !cliente || !osContratoObj || o.orcamento_id!==osContratoObj.id){ alert('Não é possível reenviar essa OS.'); return; }
-    if(!cliente.email){ alert('Esse cliente não tem e-mail cadastrado.'); return; }
+    if(!o || !cliente || !osContratoObj || o.orcamento_id!==osContratoObj.id){ alert('Não é possível compartilhar essa OS.'); return; }
     const consumidoTotal = osListCache.filter(x=>x.orcamento_id===osContratoObj.id).reduce((s,x)=>s+parseFloat(x.horas_gastas||0),0);
-    try{
-      await notificarSaldoBancoHoras({ cliente, contrato: osContratoObj, consumido: consumidoTotal, horasHoje: o.horas_gastas, data: o.data, hora: o.hora, descricao: o.descricao });
-      alert('E-mail reenviado ao cliente.');
-    }catch(e){ alert('Não deu pra reenviar agora.'); }
+    abrirCompartilharSaldo({ cliente, contrato: osContratoObj, consumido: consumidoTotal, horasHoje: o.horas_gastas, data: o.data, hora: o.hora, descricao: o.descricao, anexos: o.anexos || [] });
   }
 
   // ===================== ADMINISTRAÇÃO (super_admin) =====================
@@ -2572,20 +2578,6 @@ async function concluirCadastroGoogle(){
     gerarDocumento();
   }
 
-  function compartilharWhatsApp(){
-    const orc = window._orcamentoAtual;
-    if(!orc){ alert('Abra o orçamento antes de compartilhar.'); return; }
-    const cliente = orc.clientes || {};
-    const digitos = String(cliente.telefone || '').replace(/\D/g,'');
-    if(!digitos){ alert('Esse cliente não tem telefone cadastrado.'); return; }
-    const telefone = digitos.startsWith('55') ? digitos : '55' + digitos;
-    const link = `https://vaptorc.github.io/vaptorc-cliente/?t=${orc.link_publico_token}`;
-    const numeroFmt = String(orc.numero || '').padStart(3,'0');
-    const valor = Number(orc.valor_total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2});
-    const texto = `Olá, ${cliente.nome || ''}! Segue o orçamento nº ${numeroFmt}, no valor de R$ ${valor}.\n\nVeja os detalhes e responda pelo link:\n${link}`;
-    window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`, '_blank');
-  }
-
   function baixarPdf(){
     const nomeCliente = (window._pendingCliente && window._pendingCliente.nome) ? window._pendingCliente.nome : 'cliente';
     const nomeArquivo = `orcamento-${nomeCliente.replace(/[^a-zA-Z0-9]+/g,'-').toLowerCase()}.pdf`;
@@ -2611,13 +2603,162 @@ async function concluirCadastroGoogle(){
     return rows2[0].id;
   }
 
-  async function chamarEnviarOrcamento(id, emailsExtra){
+  // ===================== COMPARTILHAR (WhatsApp, Telegram, E-mail) =====================
+  // O envio é feito pelo próprio aparelho/conta do usuário: nada passa pelo servidor da Rika.
+  let shareCtx = null;
+
+  function shareTelefone(raw){
+    const d = String(raw || '').replace(/\D/g, '');
+    if(!d) return '';
+    return d.startsWith('55') ? d : '55' + d;
+  }
+
+  function shareListaEmails(){
+    const vistos = new Set();
+    return Array.prototype.slice.call(arguments).join(',').split(/[,;\s]+/)
+      .map(e => e.trim())
+      .filter(e => /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e))
+      .filter(e => { const k = e.toLowerCase(); if(vistos.has(k)) return false; vistos.add(k); return true; });
+  }
+
+  function shareMsg(texto, erro){
+    const el = document.getElementById('shareMsg');
+    el.textContent = texto || '';
+    el.classList.toggle('erro', !!erro);
+  }
+
+  function shareHabilitar(on){
+    document.querySelectorAll('#shareOverlay .share-opt, #sharePreview').forEach(el => { el.disabled = !on; });
+    document.getElementById('shareNativo').style.display = (typeof navigator.share === 'function') ? 'flex' : 'none';
+  }
+
+  function shareAbrir(titulo, destino){
+    document.getElementById('shareTitle').textContent = titulo;
+    document.getElementById('shareDest').textContent = destino || '';
+    document.getElementById('sharePreview').value = '';
+    shareMsg('');
+    shareHabilitar(false);
+    document.getElementById('shareOverlay').classList.add('open');
+  }
+
+  function shareDestino(c){
+    return [
+      c.telefone ? 'WhatsApp para +' + c.telefone : 'WhatsApp: você escolhe o contato',
+      c.emails.length ? 'E-mail para ' + c.emails.join(', ') : 'E-mail: cliente sem e-mail cadastrado'
+    ].join('\n');
+  }
+
+  function fecharCompartilhar(){
+    document.getElementById('shareOverlay').classList.remove('open');
+    shareCtx = null;
+  }
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') fecharCompartilhar(); });
+
+  async function abrirCompartilharOrcamento(id, emailsExtraParam){
+    if(!id){ alert('Abra o orçamento antes de compartilhar.'); return; }
+    shareAbrir('Compartilhar orçamento', 'Carregando...');
     try{
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/enviar_orcamento`, {
-        method:'POST', headers: authHeaders(), body: JSON.stringify({ p_orcamento_id: id, p_emails_extra: emailsExtra || null })
-      });
-      return res.ok;
-    }catch(e){ return false; }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/orcamentos?id=eq.${id}&empresa_id=eq.${empresaId}&select=id,numero,valor_total,link_publico_token,emails_extra,clientes(nome,telefone,email)`, { headers: authHeaders() });
+      const rows = res.ok ? await res.json() : [];
+      const orc = rows[0];
+      if(!orc) throw new Error('não encontrado');
+      const cli = orc.clientes || {};
+      const link = `https://vaptorc.github.io/vaptorc-cliente/?t=${orc.link_publico_token}`;
+      const numeroFmt = String(orc.numero || '').padStart(3, '0');
+      const valor = Number(orc.valor_total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2});
+      const extra = (emailsExtraParam !== undefined && emailsExtraParam !== null) ? emailsExtraParam : (orc.emails_extra || '');
+      shareCtx = {
+        tipo: 'orcamento', orcId: orc.id, link,
+        telefone: shareTelefone(cli.telefone),
+        emails: shareListaEmails(cli.email, extra),
+        emailsExtraTexto: String(extra || ''),
+        assunto: `Orçamento nº ${numeroFmt} - ${company.nome || ''}`
+      };
+      document.getElementById('sharePreview').value = `Olá, ${cli.nome || ''}! Segue o orçamento nº ${numeroFmt}, no valor de R$ ${valor}.\n\nVeja os detalhes e responda pelo link:\n${link}`;
+      document.getElementById('shareDest').textContent = shareDestino(shareCtx);
+      shareHabilitar(true);
+    }catch(e){
+      shareMsg('Não deu pra carregar o orçamento agora. Fecha e tenta de novo.', true);
+    }
+  }
+
+  function abrirCompartilharSaldo({cliente, contrato, consumido, horasHoje, data, hora, descricao, anexos}){
+    if(!cliente || !contrato) return;
+    const fmt = n => String(Math.round(Number(n || 0) * 100) / 100).replace('.', ',');
+    const numeroFmt = String(contrato.numero || '').padStart(3, '0');
+    const contratadas = parseFloat(contrato.carga_horaria_contratada || 0);
+    const saldo = contratadas - consumido;
+    const dataFmt = data ? new Date(data + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+    const horaFmt = hora ? String(hora).slice(0, 5) : '';
+    const anexosTxt = (anexos && anexos.length) ? '\n\nAnexos:\n' + anexos.map(a => `${a.nome || 'arquivo'}: ${a.url}`).join('\n') : '';
+    shareCtx = {
+      tipo: 'saldo', link: '',
+      telefone: shareTelefone(cliente.telefone),
+      emails: shareListaEmails(cliente.email),
+      emailsExtraTexto: '',
+      assunto: `Banco de horas - ${company.nome || ''} (ORÇ-${numeroFmt})`
+    };
+    shareAbrir('Compartilhar saldo do banco de horas', shareDestino(shareCtx));
+    document.getElementById('sharePreview').value =
+      `Olá, ${cliente.nome || ''}! Registramos uma nova ordem de serviço no seu banco de horas (ORÇ-${numeroFmt}):\n\n` +
+      `Data: ${dataFmt}${horaFmt ? ' às ' + horaFmt : ''}\n` +
+      `Descrição: ${descricao || ''}\n` +
+      `Horas desta OS: ${fmt(horasHoje)}h` + anexosTxt + `\n\n` +
+      `Saldo do banco de horas:\n` +
+      `Contratadas: ${fmt(contratadas)}h · Consumidas no total: ${fmt(consumido)}h · Saldo restante: ${fmt(saldo)}h\n\n` +
+      `Qualquer dúvida, fale com a gente.\n${company.nome || ''}`;
+    shareHabilitar(true);
+  }
+
+  // Registra no banco que o orçamento foi compartilhado (não confirma que a mensagem foi enviada).
+  function shareRegistrar(c, canal){
+    if(!c || c.tipo !== 'orcamento') return;
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/registrar_compartilhamento`, {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ p_orcamento_id: c.orcId, p_canal: canal, p_emails_extra: c.emailsExtraTexto })
+    }).then(() => { try{ carregarOrcamentos(); }catch(e){} }).catch(() => {});
+  }
+
+  function compartilharVia(canal){
+    const c = shareCtx;
+    if(!c) return;
+    const texto = document.getElementById('sharePreview').value.trim();
+    if(!texto){ shareMsg('Escreva a mensagem antes de compartilhar.', true); return; }
+
+    if(canal === 'copiar'){
+      const ok = () => { shareMsg('Mensagem copiada.'); shareRegistrar(c, 'link'); };
+      const falha = () => shareMsg('Não deu pra copiar. Selecione o texto e copie manualmente.', true);
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(texto).then(ok, falha); }
+      else{
+        try{ const ta = document.getElementById('sharePreview'); ta.select(); document.execCommand('copy') ? ok() : falha(); }catch(e){ falha(); }
+      }
+      return;
+    }
+
+    if(canal === 'nativo'){
+      navigator.share({ title: c.assunto, text: texto }).then(() => { shareRegistrar(c, 'outro'); fecharCompartilhar(); }).catch(() => {});
+      return;
+    }
+
+    const enc = encodeURIComponent;
+    let url, registro = canal, mesmaAba = false;
+    if(canal === 'whatsapp'){
+      url = 'https://wa.me/' + (c.telefone || '') + '?text=' + enc(texto);
+    }else if(canal === 'telegram'){
+      url = (c.link && texto.includes(c.link))
+        ? 'https://t.me/share/url?url=' + enc(c.link) + '&text=' + enc(texto.replace(c.link, '').trim())
+        : 'https://t.me/share/url?url=' + enc(texto);
+    }else if(canal === 'email'){
+      url = 'mailto:' + c.emails.join(',') + '?subject=' + enc(c.assunto) + '&body=' + enc(texto.replace(/\n/g, '\r\n'));
+      mesmaAba = true;
+    }else if(canal === 'gmail'){
+      url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + enc(c.emails.join(',')) + '&su=' + enc(c.assunto) + '&body=' + enc(texto);
+      registro = 'email';
+    }else{ return; }
+
+    shareRegistrar(c, registro);
+    if(mesmaAba){ window.location.href = url; } else { window.open(url, '_blank', 'noopener'); }
+    fecharCompartilhar();
   }
 
   async function salvarOrcamento(enviarAgora){
@@ -2625,7 +2766,7 @@ async function concluirCadastroGoogle(){
     const textoOriginal = btn.textContent;
     const estaEditando = !!editingOrcamentoId;
     if(!estaEditando && await bloqueadoPorLimiteFree('orcamentos', 'orçamento')) return;
-    btn.disabled = true; btn.textContent = enviarAgora ? 'Enviando...' : 'Salvando...';
+    btn.disabled = true; btn.textContent = 'Salvando...';
     try{
       let orcamentoId;
       if(estaEditando){
@@ -2663,8 +2804,7 @@ async function concluirCadastroGoogle(){
       btn.disabled = false; btn.textContent = textoOriginal;
       showScreen('orcamentos');
       if(enviarAgora){
-        const ok = await chamarEnviarOrcamento(orcamentoId, window._pendingCliente ? window._pendingCliente.emailsExtra : null);
-        alert(ok ? 'Orçamento enviado! WhatsApp (e e-mail, se configurado) saem em instantes.' : 'Orçamento salvo, mas não deu pra enviar agora — tenta de novo na tela do orçamento.');
+        abrirCompartilharOrcamento(orcamentoId, window._pendingCliente ? window._pendingCliente.emailsExtra : null);
       } else {
         alert(estaEditando ? 'Alterações salvas.' : 'Orçamento salvo como rascunho. Quando quiser, abre ele na lista e manda enviar.');
       }
