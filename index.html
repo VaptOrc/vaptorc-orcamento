@@ -102,7 +102,7 @@
   .field-group{margin-bottom:18px;}
   .field-group .label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
   .field-group .hint{font-size:11px;color:var(--slate);margin-top:4px;line-height:1.4;}
-  input[type=text], input[type=number], input[type=email], input[type=password], textarea, select{
+  input[type=text], input[type=number], input[type=email], input[type=password], input[type=date], textarea, select{
     width:100%;font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 11px;border-radius:8px;border:1px solid var(--line);background:var(--white);color:var(--ink);
   }
   textarea{resize:vertical;min-height:70px;line-height:1.5;}
@@ -632,7 +632,55 @@
 
     <!-- ADMINISTRAÇÃO (só super_admin) -->
     <section class="screen" id="screen-admin">
+      <button type="button" class="btn-ghost" style="width:100%;margin-bottom:14px;text-align:left;" onclick="showScreen('admin-cupons')">Cupons de desconto do Plano Full &rarr;</button>
       <div id="adminList"><div class="empty-state"><p>Carregando...</p></div></div>
+    </section>
+
+    <!-- CUPONS DE DESCONTO (só super_admin) -->
+    <section class="screen" id="screen-admin-cupons">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px;">
+        <p class="section-title" id="cpFormTitulo">NOVO CUPOM</p>
+        <div class="field-group">
+          <label class="label" for="cpCodigo">Código</label>
+          <input type="text" id="cpCodigo" placeholder="Ex: LANCAMENTO20" maxlength="30" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;">
+          <div class="hint">De 3 a 30 letras, números, hífen ou sublinhado. É o que o cliente digita.</div>
+        </div>
+        <div class="two-col">
+          <div class="field-group">
+            <label class="label" for="cpTipo">Tipo de desconto</label>
+            <select id="cpTipo" onchange="atualizarRotuloValorCupom()">
+              <option value="percentual">Percentual (%)</option>
+              <option value="fixo">Valor fixo (R$)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="label" for="cpValor" id="cpValorLabel">Desconto (%)</label>
+            <input type="number" id="cpValor" min="0" step="0.01" placeholder="20">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-group">
+            <label class="label" for="cpValidade">Válido até (opcional)</label>
+            <input type="date" id="cpValidade">
+          </div>
+          <div class="field-group">
+            <label class="label" for="cpLimite">Limite de usos (opcional)</label>
+            <input type="number" id="cpLimite" min="1" step="1" placeholder="Sem limite">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="label" for="cpDescricao">Descrição interna (opcional)</label>
+          <input type="text" id="cpDescricao" placeholder="Ex: promoção de lançamento" maxlength="120">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="cta-full" style="margin-top:0;flex:1;" id="cpSalvarBtn" onclick="salvarCupom()">Criar cupom</button>
+          <button type="button" class="btn-ghost" id="cpCancelarBtn" style="display:none;" onclick="cancelarEdicaoCupom()">Cancelar</button>
+        </div>
+        <div class="hint" id="cpMsg" style="margin-top:8px;min-height:16px;"></div>
+        <div class="hint" style="margin-top:4px;">O cupom vale só no primeiro pagamento da empresa e só para Pix, crédito e débito. O valor final nunca fica abaixo de R$ 1,00.</div>
+      </div>
+      <p class="section-title">CUPONS CRIADOS</p>
+      <div id="cuponsList"><div class="empty-state"><p>Carregando...</p></div></div>
     </section>
 
     <!-- MINHA EMPRESA -->
@@ -855,6 +903,7 @@
     'relatorio-banco-horas': ['Banco de horas', 'contratos ativos por cliente'],
     empresa: ['Minha empresa', 'dados que aparecem no orçamento'],
     admin: ['Administração', 'empresas clientes do VaptOrc'],
+    'admin-cupons': ['Cupons de desconto', 'promoções do Plano Full'],
     bloqueado: ['Acesso bloqueado', 'pagamento pendente'],
     novo: ['Novo orçamento', 'preencha e gere o documento'],
     doc: ['Documento', 'pronto para enviar ao cliente'],
@@ -863,7 +912,7 @@
     'plano-full': ['Plano Full', 'libere o VaptOrc sem limites'],
   };
   const tabScreens = ['home','orcamentos','clientes','relatorios'];
-  console.log('[VaptOrc] build 2026-09-19-03 (cobranca-30d, bloqueio-parcial, cor-da-marca, formas-de-pagamento)');
+  console.log('[VaptOrc] build 2026-09-19-04 (cobranca-30d, bloqueio-parcial, cor-da-marca, formas-de-pagamento, cupons)');
   let corPendente; // undefined = sem mudança | null = voltar ao padrão | '#RRGGBB'
   let history = ['login'];
   let modoAtual = 'comercio';
@@ -939,6 +988,7 @@
 
   const telasSuspensas = ['novo','financeiro','relatorios','relatorio-status','relatorio-categoria','relatorio-banco-horas','agenda'];
   function showScreen(name, push=true){
+    if((name==='admin' || name==='admin-cupons') && !souSuperAdmin) name = 'home'; // só super_admin
     if(assinaturaVencida() && telasSuspensas.includes(name)) name = 'plano-full';
     if(name !== 'empresa' && typeof corPendente !== 'undefined' && corPendente !== undefined){
       corPendente = undefined; aplicarTema(company && company.cor_primaria);
@@ -955,7 +1005,7 @@
     }
     document.getElementById('backBtn').style.display = (name!=='login' && name!=='bloqueado' && !tabScreens.includes(name)) ? 'inline-block' : 'none';
     document.getElementById('headerLogoutBtn').style.display = (name!=='login' && name!=='bloqueado') ? 'inline-flex' : 'none';
-    document.querySelectorAll('.sidebar button[data-nav]').forEach(b=>b.classList.toggle('active', b.dataset.nav===name));
+    document.querySelectorAll('.sidebar button[data-nav]').forEach(b=>b.classList.toggle('active', b.dataset.nav===name || (name==='admin-cupons' && b.dataset.nav==='admin')));
     if(push && history[history.length-1] !== name){
       history.push(name);
       try{ window.history.pushState({vaptorcNav:true}, '', location.pathname); }catch(e){}
@@ -968,6 +1018,7 @@
     if(name==='catalogo') carregarCatalogoLista();
     if(name==='novo'){ popularCatalogoSelect(); popularClienteSelect(); }
     if(name==='admin') carregarAdmin();
+    if(name==='admin-cupons') carregarCupons();
     if(name==='relatorios') carregarDashboard();
     if(name==='plano-full') renderPlanoFull();
   }
@@ -2382,6 +2433,146 @@ async function concluirCadastroGoogle(){
       }
       carregarAdmin();
     }catch(e){ alert('Não deu pra atualizar agora. ' + e); }
+  }
+
+  // ===================== CUPONS DE DESCONTO (super_admin) =====================
+  let cupomEditandoId = null;
+  let cuponsCache = [];
+  function escCupom(t){
+    return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function atualizarRotuloValorCupom(){
+    const t = document.getElementById('cpTipo').value;
+    document.getElementById('cpValorLabel').textContent = t === 'percentual' ? 'Desconto (%)' : 'Desconto (R$)';
+    document.getElementById('cpValor').placeholder = t === 'percentual' ? '20' : '5.00';
+  }
+  function statusCupom(c){
+    const d = new Date();
+    const hoje = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    if(!c.ativo) return ['Pausado', 'status-cancelado'];
+    if(c.valido_ate && c.valido_ate < hoje) return ['Expirado', 'status-pendente'];
+    if(c.limite_usos && Number(c.usos) >= Number(c.limite_usos)) return ['Esgotado', 'status-aguardando_aprovacao'];
+    return ['Ativo', 'status-aprovado'];
+  }
+  function msgCupomForm(texto, ok){
+    const m = document.getElementById('cpMsg');
+    m.style.color = ok ? '#1E7B45' : '#B3261E';
+    m.textContent = texto || '';
+  }
+  async function carregarCupons(){
+    const list = document.getElementById('cuponsList');
+    if(!souSuperAdmin){ list.innerHTML = '<div class="empty-state"><p>Acesso restrito.</p></div>'; return; }
+    list.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_listar_cupons`, { method:'POST', headers: authHeaders(), body: '{}' });
+      if(!res.ok) throw new Error(await res.text());
+      cuponsCache = await res.json();
+      if(!cuponsCache.length){ list.innerHTML = '<div class="empty-state"><p>Nenhum cupom ainda. Crie o primeiro acima.</p></div>'; return; }
+      list.innerHTML = cuponsCache.map(c => {
+        const [rot, cls] = statusCupom(c);
+        const desc = c.tipo === 'percentual' ? `${Number(c.valor)}% de desconto` : `${fmtBRL(c.valor)} de desconto`;
+        const usos = c.limite_usos ? `${c.usos} de ${c.limite_usos} usos` : `${c.usos} ${Number(c.usos) === 1 ? 'uso' : 'usos'}`;
+        const val = c.valido_ate ? `válido até ${fmtData(c.valido_ate)}` : 'sem validade';
+        const dado = Number(c.desconto_total) > 0 ? ` · ${fmtBRL(c.desconto_total)} em descontos` : '';
+        return `
+        <div class="simple-item" style="cursor:default;flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="min-width:0;"><strong style="font-family:monospace;font-size:14.5px;letter-spacing:.3px;">${escCupom(c.codigo)}</strong>
+              <span class="badge ${cls}" style="margin-left:8px;">${rot}</span></div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn-ghost" style="padding:7px 12px;font-size:12px;" onclick="editarCupom('${c.id}')">Editar</button>
+              <button class="btn-ghost" style="padding:7px 12px;font-size:12px;" onclick="alternarCupom('${c.id}', ${c.ativo ? 'true' : 'false'})">${c.ativo ? 'Pausar' : 'Ativar'}</button>
+            </div>
+          </div>
+          <div class="sub" style="color:var(--slate);font-size:12px;line-height:1.5;">${desc} · ${val}<br>${usos}${dado}${c.descricao ? '<br>' + escCupom(c.descricao) : ''}</div>
+        </div>`;
+      }).join('');
+    }catch(e){
+      console.error('[VaptOrc] carregarCupons falhou:', e);
+      list.innerHTML = '<div class="empty-state"><p>Não deu pra carregar os cupons agora.</p></div>';
+    }
+  }
+  function cancelarEdicaoCupom(){
+    cupomEditandoId = null;
+    ['cpCodigo','cpValor','cpValidade','cpLimite','cpDescricao'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('cpCodigo').disabled = false;
+    document.getElementById('cpTipo').value = 'percentual';
+    atualizarRotuloValorCupom();
+    document.getElementById('cpFormTitulo').textContent = 'NOVO CUPOM';
+    document.getElementById('cpSalvarBtn').textContent = 'Criar cupom';
+    document.getElementById('cpCancelarBtn').style.display = 'none';
+  }
+  function editarCupom(id){
+    const c = cuponsCache.find(x => x.id === id);
+    if(!c) return;
+    cupomEditandoId = id;
+    document.getElementById('cpCodigo').value = c.codigo;
+    document.getElementById('cpCodigo').disabled = true; // o código não muda depois de criado
+    document.getElementById('cpTipo').value = c.tipo;
+    atualizarRotuloValorCupom();
+    document.getElementById('cpValor').value = Number(c.valor);
+    document.getElementById('cpValidade').value = c.valido_ate || '';
+    document.getElementById('cpLimite').value = c.limite_usos || '';
+    document.getElementById('cpDescricao').value = c.descricao || '';
+    document.getElementById('cpFormTitulo').textContent = 'EDITANDO CUPOM';
+    document.getElementById('cpSalvarBtn').textContent = 'Salvar alterações';
+    document.getElementById('cpCancelarBtn').style.display = 'inline-block';
+    msgCupomForm('', true);
+    document.getElementById('cpTipo').scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+  async function salvarCupom(){
+    if(!souSuperAdmin) return;
+    const btn = document.getElementById('cpSalvarBtn');
+    const codigo = document.getElementById('cpCodigo').value.trim().toUpperCase();
+    const tipo = document.getElementById('cpTipo').value;
+    const valor = parseFloat(document.getElementById('cpValor').value);
+    const validade = document.getElementById('cpValidade').value || null;
+    const limRaw = document.getElementById('cpLimite').value.trim();
+    const limite = limRaw ? parseInt(limRaw, 10) : null;
+    const descricao = document.getElementById('cpDescricao').value.trim() || null;
+
+    if(!cupomEditandoId && !/^[A-Z0-9_-]{3,30}$/.test(codigo)){ msgCupomForm('Código inválido: use de 3 a 30 letras, números, hífen ou sublinhado, sem espaços.', false); return; }
+    if(!(valor > 0)){ msgCupomForm('Informe o valor do desconto.', false); return; }
+    if(tipo === 'percentual' && valor > 100){ msgCupomForm('O percentual não pode passar de 100.', false); return; }
+    if(limite !== null && !(limite > 0)){ msgCupomForm('O limite de usos precisa ser um número maior que zero.', false); return; }
+
+    btn.disabled = true; msgCupomForm('Salvando...', true);
+    try{
+      const body = { tipo, valor, valido_ate: validade, limite_usos: limite, descricao };
+      let res;
+      if(cupomEditandoId){
+        res = await fetch(`${SUPABASE_URL}/rest/v1/cupons?id=eq.${cupomEditandoId}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify(body) });
+      } else {
+        body.codigo = codigo;
+        res = await fetch(`${SUPABASE_URL}/rest/v1/cupons`, { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
+      }
+      if(!res.ok){
+        const txt = await res.text();
+        console.error('[VaptOrc] salvarCupom falhou:', res.status, txt);
+        if(res.status === 409 || txt.indexOf('23505') !== -1) msgCupomForm('Já existe um cupom com esse código.', false);
+        else if(txt.indexOf('Código inválido') !== -1) msgCupomForm('Código inválido: use de 3 a 30 letras, números, hífen ou sublinhado, sem espaços.', false);
+        else if(res.status === 401 || res.status === 403) msgCupomForm('Sem permissão para salvar cupons.', false);
+        else msgCupomForm('Não deu pra salvar agora. Tente de novo.', false);
+        return;
+      }
+      const foiEdicao = !!cupomEditandoId;
+      cancelarEdicaoCupom();
+      msgCupomForm(foiEdicao ? 'Cupom atualizado.' : 'Cupom criado.', true);
+      carregarCupons();
+    }catch(e){
+      msgCupomForm('Não deu pra salvar agora. Tente de novo.', false);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+  async function alternarCupom(id, ativoAtual){
+    if(!souSuperAdmin) return;
+    if(ativoAtual && !confirm('Pausar esse cupom? Ninguém consegue usar enquanto estiver pausado.')) return;
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/cupons?id=eq.${id}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ ativo: !ativoAtual }) });
+      if(!res.ok){ alert('Não deu pra atualizar o cupom agora.'); return; }
+      carregarCupons();
+    }catch(e){ alert('Não deu pra atualizar o cupom agora.'); }
   }
 
   // ===================== MATERIAIS & SERVIÇOS (catálogo) =====================
