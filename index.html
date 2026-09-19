@@ -559,6 +559,14 @@
         <button type="button" class="pay-opt" data-forma="credito" onclick="selecionarForma('credito')">Cartão de crédito<span>Você paga 30 dias por vez, sem renovação automática</span></button>
         <button type="button" class="pay-opt" data-forma="debito" onclick="selecionarForma('debito')">Cartão de débito<span>Você paga 30 dias por vez</span></button>
         <button type="button" class="pay-opt" data-forma="pix" onclick="selecionarForma('pix')">Pix<span>Você paga 30 dias por vez, com QR Code ou copia e cola</span></button>
+        <div id="cupomBox" style="margin-top:14px;">
+          <label class="label" for="cupomInput" style="display:block;font-size:12.5px;font-weight:600;margin-bottom:6px;">Tem um cupom de desconto?</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="cupomInput" placeholder="Digite o código" autocomplete="off" autocapitalize="characters" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter'){event.preventDefault();aplicarCupom();}" oninput="cupomEditado()">
+            <button type="button" id="cupomBtn" onclick="aplicarCupom()" style="background:var(--white);border:1.5px solid var(--copper);color:var(--copper);border-radius:10px;padding:0 16px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;cursor:pointer;">Aplicar</button>
+          </div>
+          <div class="hint" id="cupomMsg" style="margin-top:6px;min-height:16px;"></div>
+        </div>
         <button class="cta-full" onclick="pagarPlanoFull()" id="assinarPlanoFullBtn">Pagar</button>
         <div class="hint" id="payMsg" style="text-align:center;margin-top:10px;"></div>
         <div class="hint" style="text-align:center;margin-top:6px;">Cada pagamento libera 30 dias. Os dados do cartão ficam com o Mercado Pago.</div>
@@ -1297,7 +1305,7 @@ async function concluirCadastroGoogle(){
   let formaPagamentoSel = 'pix';
   function fmtBRL(v){ return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
   function fmtData(iso){ if(!iso) return ''; const p = String(iso).split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
-  function precoPlanoFull(){ return Number(company && company.valor_mensalidade) || 18.99; }
+  function precoPlanoFull(){ return Number(company && company.valor_mensalidade) || 24.99; }
   function assinaturaVencida(){
     return !!(company && company.status_assinatura === 'bloqueada' && !souSuperAdmin);
   }
@@ -1331,9 +1339,67 @@ async function concluirCadastroGoogle(){
   }
 
   // ---- tela Plano Full ----
+  // ---- cupom de desconto (a validação de verdade é no banco; aqui é só prévia) ----
+  let cupomAplicado = null; // { codigo, valor_final, valor_original, desconto }
+  function precoAtualBotao(){ return cupomAplicado ? cupomAplicado.valor_final : precoPlanoFull(); }
+  function atualizarTextoBotaoPagar(){
+    const btn = document.getElementById('assinarPlanoFullBtn');
+    if(!btn || !company) return;
+    const preco = fmtBRL(precoAtualBotao());
+    if(company.plano === 'free') btn.textContent = `Assinar por ${preco} a cada 30 dias`;
+    else btn.textContent = `Renovar por ${preco}`;
+    if(cupomAplicado) btn.textContent = btn.textContent.replace(' a cada 30 dias', '') + ' (1º pagamento)';
+  }
+  function limparCupom(manterCampo){
+    cupomAplicado = null;
+    if(!manterCampo){ const i = document.getElementById('cupomInput'); if(i) i.value = ''; }
+    const m = document.getElementById('cupomMsg'); if(m){ m.textContent = ''; m.style.color = ''; }
+    atualizarTextoBotaoPagar();
+  }
+  function cupomEditado(){ if(cupomAplicado) limparCupom(true); }
+  function atualizarVisibilidadeCupom(){
+    const box = document.getElementById('cupomBox');
+    if(!box) return;
+    const recorrente = formaPagamentoSel === 'recorrente';
+    box.style.display = recorrente ? 'none' : 'block';
+    if(recorrente) limparCupom(false);
+  }
+  async function aplicarCupom(){
+    const input = document.getElementById('cupomInput');
+    const msg = document.getElementById('cupomMsg');
+    const btn = document.getElementById('cupomBtn');
+    const codigo = (input.value || '').trim();
+    cupomAplicado = null; atualizarTextoBotaoPagar();
+    if(!codigo){ msg.style.color = ''; msg.textContent = ''; return; }
+    btn.disabled = true; msg.style.color = ''; msg.textContent = 'Conferindo o cupom...';
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validar_cupom`, {
+        method:'POST', headers: authHeaders(), body: JSON.stringify({ p_codigo: codigo, p_forma: formaPagamentoSel })
+      });
+      if(!res.ok) throw new Error('rpc');
+      const r = await res.json();
+      if(r.valido && r.cupom_id){
+        cupomAplicado = { codigo, valor_final: Number(r.valor_final), valor_original: Number(r.valor_original), desconto: Number(r.desconto) };
+        msg.style.color = '#1E7B45';
+        msg.textContent = `Cupom aplicado: de ${fmtBRL(r.valor_original)} por ${fmtBRL(r.valor_final)} (vale só no primeiro pagamento).`;
+      } else {
+        msg.style.color = '#B3261E';
+        msg.textContent = r.motivo || 'Cupom inválido.';
+      }
+    }catch(e){
+      msg.style.color = '#B3261E';
+      msg.textContent = 'Não deu pra conferir o cupom agora. Tente de novo.';
+    }finally{
+      btn.disabled = false;
+      atualizarTextoBotaoPagar();
+    }
+  }
+
   function selecionarForma(f){
+    if(formaPagamentoSel !== f && cupomAplicado) limparCupom(true); // o cupom depende da forma de pagamento
     formaPagamentoSel = f;
     document.querySelectorAll('#payOpcoes .pay-opt, #payArea .pay-opt').forEach(b => b.classList.toggle('sel', b.dataset.forma === f));
+    atualizarVisibilidadeCupom();
   }
   function renderPlanoFull(){
     const box = document.getElementById('planoStatusBox');
@@ -1342,6 +1408,7 @@ async function concluirCadastroGoogle(){
     const area = document.getElementById('payArea');
     const btn = document.getElementById('assinarPlanoFullBtn');
     document.getElementById('payMsg').textContent = '';
+    limparCupom(false);
     box.style.background = '#fff8ec';
     area.style.display = 'block';
     const preco = fmtBRL(precoPlanoFull());
@@ -1374,9 +1441,13 @@ async function concluirCadastroGoogle(){
     msg.textContent = 'Gerando o seu link de pagamento...';
     try{
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/solicitar_pagamento`, {
-        method:'POST', headers: authHeaders(), body: JSON.stringify({ p_forma: formaPagamentoSel })
+        method:'POST', headers: authHeaders(), body: JSON.stringify({ p_forma: formaPagamentoSel, p_codigo: (cupomAplicado && formaPagamentoSel !== 'recorrente') ? cupomAplicado.codigo : null })
       });
-      if(!res.ok) throw new Error('rpc');
+      if(!res.ok){
+        let det = ''; try{ det = (await res.json()).message || ''; }catch(_){}
+        if(/^Cupom:/.test(det)){ const err = new Error('cupom'); err.motivo = det.replace(/^Cupom:\s*/, ''); throw err; }
+        throw new Error('rpc');
+      }
       const faturaId = await res.json();
       for(let i = 0; i < 30; i++){
         const r2 = await fetch(`${SUPABASE_URL}/rest/v1/faturas_vaptorc?id=eq.${faturaId}&select=mp_link`, { headers: authHeaders() });
@@ -1388,6 +1459,7 @@ async function concluirCadastroGoogle(){
       }
       throw new Error('timeout');
     }catch(e){
+      if(e && e.motivo){ limparCupom(true); msg.textContent = 'Cupom não aplicado: ' + e.motivo + ' Confira o valor e tente de novo.'; btn.disabled = false; return; }
       msg.innerHTML = 'Não deu pra gerar o link agora. Tente de novo em instantes ou escreva para <a href="mailto:comercial@rikasolucoes.com.br">comercial@rikasolucoes.com.br</a>.';
     }finally{
       btn.disabled = false;
